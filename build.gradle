@@ -24,6 +24,7 @@ repositories {
 
 dependencies {
     compile "org.junit.platform:junit-platform-engine:${junitPlatformVersion}"
+    compile "io.github.lukehutch:fast-classpath-scanner:${fastClasspathScannerVersion}"
 
     testCompile "org.junit.jupiter:junit-jupiter-api:${junitJupiterVersion}"
     testRuntime "org.junit.jupiter:junit-jupiter-engine:${junitJupiterVersion}"
@@ -51,9 +52,8 @@ test {
     useJUnitPlatform()
     testLogging {
         events 'passed', 'skipped', 'failed'
-        showStandardStreams = true
+        showStandardStreams = false
     }
-    systemProperty 'grmlpfg', 'false'
 }
 
 buildScan {
