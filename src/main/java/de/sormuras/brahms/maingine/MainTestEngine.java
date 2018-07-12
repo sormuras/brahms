@@ -16,14 +16,21 @@
 
 package de.sormuras.brahms.maingine;
 
-import io.github.lukehutch.fastclasspathscanner.FastClasspathScanner;
+import static org.junit.platform.commons.util.ReflectionUtils.findAllClassesInPackage;
+import static org.junit.platform.engine.support.filter.ClasspathScanningSupport.buildClassNamePredicate;
+
+import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.util.Collection;
+import org.junit.platform.commons.util.ClassFilter;
 import org.junit.platform.engine.EngineDiscoveryRequest;
 import org.junit.platform.engine.ExecutionRequest;
 import org.junit.platform.engine.TestDescriptor;
 import org.junit.platform.engine.TestEngine;
 import org.junit.platform.engine.TestExecutionResult;
 import org.junit.platform.engine.UniqueId;
+import org.junit.platform.engine.discovery.ClassSelector;
+import org.junit.platform.engine.discovery.PackageSelector;
 import org.junit.platform.engine.support.descriptor.EngineDescriptor;
 
 /** Main-invoking TestEngine implementation. */
@@ -38,11 +45,24 @@ public class MainTestEngine implements TestEngine {
   public TestDescriptor discover(EngineDiscoveryRequest discoveryRequest, UniqueId uniqueId) {
     var engine = new EngineDescriptor(uniqueId, "Maingine");
 
-    new FastClasspathScanner("integration")
-        .matchAllStandardClasses(candidate -> handleCandidate(engine, candidate))
-        .enableExternalClasses(false)
-        .suppressMatchProcessorExceptions()
-        .scan();
+    ClassFilter classFilter = ClassFilter.of(buildClassNamePredicate(discoveryRequest), c -> true);
+
+    // package
+    discoveryRequest
+        .getSelectorsByType(PackageSelector.class)
+        .stream()
+        .map(PackageSelector::getPackageName)
+        .map(packageName -> findAllClassesInPackage(packageName, classFilter))
+        .flatMap(Collection::stream)
+        .forEach(candidate -> handleCandidate(engine, candidate));
+
+    // class
+    discoveryRequest
+        .getSelectorsByType(ClassSelector.class)
+        .stream()
+        .map(ClassSelector::getJavaClass)
+        .filter(classFilter)
+        .forEach(candidate -> handleCandidate(engine, candidate));
 
     return engine;
   }
@@ -57,7 +77,7 @@ public class MainTestEngine implements TestEngine {
         return;
       }
       var container = MainClass.of(candidate, engine);
-      MainMethod.of(candidate, container);
+      MainMethod.of(main, container);
     } catch (NoSuchMethodException e) {
       // ignore
     }
@@ -68,23 +88,22 @@ public class MainTestEngine implements TestEngine {
     var engine = request.getRootTestDescriptor();
     var listener = request.getEngineExecutionListener();
     listener.executionStarted(engine);
-    for (var container : engine.getChildren()) {
-      listener.executionStarted(container);
-      for (var child : container.getChildren()) {
-        listener.executionStarted(child);
-        var result = executeMainMethod(((MainMethod) child).getMainClass());
-        listener.executionFinished(child, result);
+    for (var mainClass : engine.getChildren()) {
+      listener.executionStarted(mainClass);
+      for (var mainMethod : mainClass.getChildren()) {
+        listener.executionStarted(mainMethod);
+        var result = executeMainMethod(((MainMethod) mainMethod).getMethod());
+        listener.executionFinished(mainMethod, result);
       }
-      listener.executionFinished(container, TestExecutionResult.successful());
+      listener.executionFinished(mainClass, TestExecutionResult.successful());
     }
     listener.executionFinished(engine, TestExecutionResult.successful());
   }
 
-  private TestExecutionResult executeMainMethod(Class<?> mainClass) {
+  private TestExecutionResult executeMainMethod(Method method) {
     try {
-      var mainMethod = mainClass.getMethod("main", String[].class);
       var arguments = new String[0];
-      mainMethod.invoke(null, new Object[] {arguments});
+      method.invoke(null, new Object[] {arguments});
       return TestExecutionResult.successful();
     } catch (Throwable t) {
       return TestExecutionResult.failed(t);

@@ -16,6 +16,7 @@
 
 package de.sormuras.brahms.maingine;
 
+import java.lang.reflect.Method;
 import org.junit.platform.engine.TestDescriptor;
 import org.junit.platform.engine.UniqueId;
 import org.junit.platform.engine.support.descriptor.AbstractTestDescriptor;
@@ -23,29 +24,19 @@ import org.junit.platform.engine.support.descriptor.MethodSource;
 
 class MainMethod extends AbstractTestDescriptor {
 
-  static MainMethod of(Class<?> mainClass, TestDescriptor parent) {
-    var uniqueId = parent.getUniqueId().append("main-method", mainClass.getName());
+  static MainMethod of(Method method, TestDescriptor parent) {
+    var uniqueId = parent.getUniqueId().append("main-method", "main");
     var displayName = "main()";
-    var testSource = getMainMethodSource(mainClass);
-    var result = new MainMethod(uniqueId, displayName, testSource, mainClass);
+    var result = new MainMethod(uniqueId, displayName, MethodSource.from(method), method);
     parent.addChild(result);
     return result;
   }
 
-  private static MethodSource getMainMethodSource(Class<?> mainClass) {
-    try {
-      return MethodSource.from(mainClass.getMethod("main", String[].class));
-    } catch (NoSuchMethodException e) {
-      throw new Error("main method not found", e);
-    }
-  }
+  private final Method method;
 
-  private final Class<?> mainClass;
-
-  private MainMethod(
-      UniqueId uniqueId, String displayName, MethodSource source, Class<?> mainClass) {
+  private MainMethod(UniqueId uniqueId, String displayName, MethodSource source, Method method) {
     super(uniqueId, displayName, source);
-    this.mainClass = mainClass;
+    this.method = method;
   }
 
   @Override
@@ -53,7 +44,7 @@ class MainMethod extends AbstractTestDescriptor {
     return Type.TEST;
   }
 
-  Class<?> getMainClass() {
-    return mainClass;
+  Method getMethod() {
+    return method;
   }
 }
