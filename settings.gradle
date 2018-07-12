@@ -1,0 +1,10 @@
+// Require Java 10 or higher
+int javaVersion = Integer.valueOf(JavaVersion.current().getMajorVersion())
+if (javaVersion < 10) {
+    throw new GradleException("The Bartholdy build requires Java 10 or higher. " +
+            "Currently executing with Java " + javaVersion + ".")
+}
+
+rootProject.name = 'brahms'
+
+enableFeaturePreview('STABLE_PUBLISHING')

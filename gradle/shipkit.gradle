@@ -1,0 +1,31 @@
+shipkit {
+    gitHub.repository = 'sormuras/brahms'
+    gitHub.readOnlyAuthToken = 'e120e0672ef853bcf92633dd8b11b2b961cf2c87'
+    gitHub.writeAuthToken = System.getenv('GH_WRITE_TOKEN')
+
+    team.developers = ['sormuras:Christian Stein']
+}
+
+allprojects {
+    plugins.withId("org.shipkit.bintray") {
+        bintray {
+            user = System.getenv('BINTRAY_USER')
+            key = System.getenv('BINTRAY_KEY')
+            pkg {
+                repo = 'maven'   // https://bintray.com/sormuras/maven
+                name = 'brahms'  // https://bintray.com/sormuras/maven/brahms
+                licenses = ['Apache-2.0']
+                vcsUrl = 'https://github.com/sormuras/brahms.git'
+                labels = ['test']
+
+                version {
+                    mavenCentralSync {
+                        sync = true
+                        user = System.getenv('NEXUS_USER')
+                        password = System.getenv('NEXUS_PASS')
+                    }
+                }
+            }
+        }
+    }
+}

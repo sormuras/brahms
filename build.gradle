@@ -1,0 +1,66 @@
+plugins {
+    id 'java-library'
+    id 'com.gradle.build-scan' version '1.15'
+    id 'org.shipkit.java' version '2.0.28'
+    id 'com.github.sherter.google-java-format' version '0.7.1'
+    id 'com.github.ben-manes.versions' version '0.20.0'
+}
+
+apply plugin: 'idea'
+
+ext.moduleName = 'de.sormuras.brahms'
+description = 'TestEngine ideas'
+
+idea {
+    project {
+        jdkName = '10'
+        languageLevel = '10'
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    compile "org.junit.platform:junit-platform-engine:${junitPlatformVersion}"
+
+    testCompile "org.junit.jupiter:junit-jupiter-api:${junitJupiterVersion}"
+    testRuntime "org.junit.jupiter:junit-jupiter-engine:${junitJupiterVersion}"
+}
+
+javadoc {
+    classpath = project.sourceSets.main.compileClasspath
+    options {
+        memberLevel = JavadocMemberLevel.PROTECTED
+        header = project.name
+        use = true
+        addBooleanOption('Xdoclint:html,syntax', true)
+        addBooleanOption('html5', true)
+        encoding = 'UTF-8'
+        noTimestamp = true
+    }
+}
+
+jar {
+    exclude 'LICENSE' // keep root directory "clean", only `module-info.class` is allowed
+    into 'de/sormuras/brahms', { from 'version.properties' }
+}
+
+test {
+    useJUnitPlatform()
+    testLogging {
+        events 'passed', 'skipped', 'failed'
+        showStandardStreams = true
+    }
+    systemProperty 'grmlpfg', 'false'
+}
+
+buildScan {
+    termsOfServiceUrl = 'https://gradle.com/terms-of-service'
+    termsOfServiceAgree = 'yes'
+}
+
+wrapper {
+    gradleVersion = '4.9-rc-2'
+}
