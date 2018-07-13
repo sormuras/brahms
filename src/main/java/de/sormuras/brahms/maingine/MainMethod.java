@@ -17,26 +17,41 @@
 package de.sormuras.brahms.maingine;
 
 import java.lang.reflect.Method;
-import org.junit.platform.engine.TestDescriptor;
+import java.util.Arrays;
 import org.junit.platform.engine.UniqueId;
 import org.junit.platform.engine.support.descriptor.AbstractTestDescriptor;
 import org.junit.platform.engine.support.descriptor.MethodSource;
 
 class MainMethod extends AbstractTestDescriptor {
 
-  static MainMethod of(Method method, TestDescriptor parent) {
-    var uniqueId = parent.getUniqueId().append("main-method", "main");
-    var displayName = "main()";
-    var result = new MainMethod(uniqueId, displayName, MethodSource.from(method), method);
-    parent.addChild(result);
-    return result;
+  private static String displayName(Test test) {
+    var displayName = test.displayName();
+    var args = String.join(", ", test.value());
+    if (displayName.length() > 0) {
+      return displayName.replace("${ARGS}", args);
+    }
+    return test.displayName().isEmpty() ? "main(" + args + ")" : test.displayName();
   }
 
   private final Method method;
+  private final boolean fork;
+  private final String[] arguments;
+  private final String[] options;
 
-  private MainMethod(UniqueId uniqueId, String displayName, MethodSource source, Method method) {
-    super(uniqueId, displayName, source);
+  MainMethod(UniqueId uniqueId, Method method) {
+    super(uniqueId, "main()", MethodSource.from(method));
     this.method = method;
+    this.fork = false;
+    this.arguments = new String[0];
+    this.options = new String[0];
+  }
+
+  MainMethod(UniqueId uniqueId, Method method, Test test) {
+    super(uniqueId, displayName(test), MethodSource.from(method));
+    this.method = method;
+    this.arguments = test.value();
+    this.fork = test.fork();
+    this.options = test.options();
   }
 
   @Override
@@ -46,5 +61,33 @@ class MainMethod extends AbstractTestDescriptor {
 
   Method getMethod() {
     return method;
+  }
+
+  boolean isFork() {
+    return fork;
+  }
+
+  String[] getArguments() {
+    return arguments;
+  }
+
+  String[] getOptions() {
+    return options;
+  }
+
+  @Override
+  public String toString() {
+    String sb =
+        "MainMethod{"
+            + "method="
+            + method
+            + ", fork="
+            + fork
+            + ", arguments="
+            + Arrays.toString(arguments)
+            + ", options="
+            + Arrays.toString(options)
+            + '}';
+    return sb;
   }
 }

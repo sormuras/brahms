@@ -16,9 +16,21 @@
 
 package integration;
 
+import de.sormuras.brahms.maingine.Test;
+
 public class MainOne {
 
-  public static void main(String[] args) {
-    System.out.println("MainOne");
+  @Test("1")
+  @Test({"2", "3"})
+  @Test(
+      displayName = "main with ${ARGS} as args",
+      value = {"3", "4", "5"})
+  @Test(
+      fork = true,
+      displayName = "☕ ${ARGS}",
+      options = {"-classpath", "${JAVA.CLASS.PATH}"},
+      value = {"6", "7"})
+  public static void main(String... args) {
+    System.out.println("MainOne(" + String.join(", ", args) + ")");
   }
 }

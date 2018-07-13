@@ -16,12 +16,18 @@
 
 package de.sormuras.brahms.maingine;
 
+import static java.lang.System.identityHashCode;
 import static org.junit.platform.commons.util.ReflectionUtils.findAllClassesInPackage;
 import static org.junit.platform.engine.support.filter.ClasspathScanningSupport.buildClassNamePredicate;
 
+import java.io.IOException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.List;
 import org.junit.platform.commons.util.ClassFilter;
 import org.junit.platform.engine.EngineDiscoveryRequest;
 import org.junit.platform.engine.ExecutionRequest;
@@ -68,18 +74,31 @@ public class MainTestEngine implements TestEngine {
   }
 
   private void handleCandidate(EngineDescriptor engine, Class<?> candidate) {
+    Method main;
     try {
-      var main = candidate.getMethod("main", String[].class);
-      if (!Modifier.isStatic(main.getModifiers())) {
-        return;
-      }
-      if (main.getReturnType() != void.class) {
-        return;
-      }
-      var container = MainClass.of(candidate, engine);
-      MainMethod.of(main, container);
+      main = candidate.getDeclaredMethod("main", String[].class);
     } catch (NoSuchMethodException e) {
-      // ignore
+      return;
+    }
+    if (!Modifier.isPublic(main.getModifiers())) {
+      return;
+    }
+    if (!Modifier.isStatic(main.getModifiers())) {
+      return;
+    }
+    if (main.getReturnType() != void.class) {
+      return;
+    }
+    var container = MainClass.of(candidate, engine);
+    var annotations = main.getDeclaredAnnotationsByType(Test.class);
+    if (annotations.length == 0) {
+      var id = container.getUniqueId().append("main", "main0");
+      container.addChild(new MainMethod(id, main));
+      return;
+    }
+    for (var annotation : annotations) {
+      var id = container.getUniqueId().append("main", "main" + identityHashCode(annotation));
+      container.addChild(new MainMethod(id, main, annotation));
     }
   }
 
@@ -92,7 +111,7 @@ public class MainTestEngine implements TestEngine {
       listener.executionStarted(mainClass);
       for (var mainMethod : mainClass.getChildren()) {
         listener.executionStarted(mainMethod);
-        var result = executeMainMethod(((MainMethod) mainMethod).getMethod());
+        var result = executeMainMethod(((MainMethod) mainMethod));
         listener.executionFinished(mainMethod, result);
       }
       listener.executionFinished(mainClass, TestExecutionResult.successful());
@@ -100,13 +119,46 @@ public class MainTestEngine implements TestEngine {
     listener.executionFinished(engine, TestExecutionResult.successful());
   }
 
-  private TestExecutionResult executeMainMethod(Method method) {
+  private TestExecutionResult executeMainMethod(MainMethod mainMethod) {
+    return mainMethod.isFork() ? executeForked(mainMethod) : executeDirect(mainMethod);
+  }
+
+  private TestExecutionResult executeDirect(MainMethod mainMethod) {
     try {
-      var arguments = new String[0];
-      method.invoke(null, new Object[] {arguments});
-      return TestExecutionResult.successful();
+      var method = mainMethod.getMethod();
+      var arguments = new Object[] {mainMethod.getArguments()};
+      method.invoke(null, arguments);
     } catch (Throwable t) {
       return TestExecutionResult.failed(t);
     }
+    return TestExecutionResult.successful();
+  }
+
+  // https://docs.oracle.com/javase/10/tools/java.htm
+  // java [options] mainclass [args...]
+  // java [options] -jar jarfile [args...]
+  // java [options] [--module-path modulepath] --module module[/mainclass] [args...]
+  private TestExecutionResult executeForked(MainMethod mainMethod) {
+    var builder = new ProcessBuilder(java().normalize().toAbsolutePath().toString());
+    Arrays.stream(mainMethod.getOptions())
+        .map(o -> o.replace("${JAVA.CLASS.PATH}", System.getProperty("java.class.path")))
+        .forEach(builder.command()::add);
+    builder.command().add(mainMethod.getMethod().getDeclaringClass().getName());
+    builder.command().addAll(List.of(mainMethod.getArguments()));
+    builder.inheritIO();
+    try {
+      var process = builder.start();
+      var exit = process.waitFor();
+      if (exit != 0) {
+        return TestExecutionResult.failed(new IllegalStateException("exit = " + exit));
+      }
+    } catch (IOException | InterruptedException e) {
+      return TestExecutionResult.failed(e);
+    }
+    return TestExecutionResult.successful();
+  }
+
+  private static Path java() {
+    return ProcessHandle.current().info().command().map(Paths::get).orElseThrow();
   }
 }
