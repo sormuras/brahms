@@ -18,11 +18,13 @@ package de.sormuras.brahms.maingine;
 
 import static java.lang.System.identityHashCode;
 import static org.junit.platform.commons.util.ReflectionUtils.findAllClassesInPackage;
+import static org.junit.platform.commons.util.ReflectionUtils.isPublic;
+import static org.junit.platform.commons.util.ReflectionUtils.isStatic;
+import static org.junit.platform.commons.util.ReflectionUtils.returnsVoid;
 import static org.junit.platform.engine.support.filter.ClasspathScanningSupport.buildClassNamePredicate;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
@@ -80,13 +82,13 @@ public class MainTestEngine implements TestEngine {
     } catch (NoSuchMethodException e) {
       return;
     }
-    if (!Modifier.isPublic(main.getModifiers())) {
+    if (!isPublic(main)) {
       return;
     }
-    if (!Modifier.isStatic(main.getModifiers())) {
+    if (!isStatic(main)) {
       return;
     }
-    if (main.getReturnType() != void.class) {
+    if (!returnsVoid(main)) {
       return;
     }
     var container = MainClass.of(candidate, engine);
@@ -140,11 +142,12 @@ public class MainTestEngine implements TestEngine {
   // java [options] [--module-path modulepath] --module module[/mainclass] [args...]
   private TestExecutionResult executeForked(MainMethod mainMethod) {
     var builder = new ProcessBuilder(java().normalize().toAbsolutePath().toString());
+    var command = builder.command();
     Arrays.stream(mainMethod.getOptions())
-        .map(o -> o.replace("${JAVA.CLASS.PATH}", System.getProperty("java.class.path")))
-        .forEach(builder.command()::add);
-    builder.command().add(mainMethod.getMethod().getDeclaringClass().getName());
-    builder.command().addAll(List.of(mainMethod.getArguments()));
+        .map(MainTestEngine::replaceSystemProperties)
+        .forEach(command::add);
+    command.add(mainMethod.getMethod().getDeclaringClass().getName());
+    command.addAll(List.of(mainMethod.getArguments()));
     builder.inheritIO();
     try {
       var process = builder.start();
@@ -160,5 +163,20 @@ public class MainTestEngine implements TestEngine {
 
   private static Path java() {
     return ProcessHandle.current().info().command().map(Paths::get).orElseThrow();
+  }
+
+  // https://docs.oracle.com/javase/10/docs/api/java/lang/System.html#getProperties()
+  private static String replaceSystemProperties(String string) {
+    string = replaceSystemProperty(string, "java.class.path");
+    string = replaceSystemProperty(string, "jdk.module.path");
+    return string;
+  }
+
+  private static String replaceSystemProperty(String string, String key) {
+    var replacement = System.getProperty(key);
+    if (replacement == null) {
+      return string;
+    }
+    return string.replace("${" + key + "}", replacement);
   }
 }

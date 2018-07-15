@@ -28,7 +28,7 @@ public class MainOne {
   @Test(
       fork = true,
       displayName = "☕ ${ARGS}",
-      options = {"-classpath", "${JAVA.CLASS.PATH}"},
+      options = {"-classpath", "${java.class.path}"},
       value = {"6", "7"})
   public static void main(String... args) {
     System.out.println("MainOne(" + String.join(", ", args) + ")");
