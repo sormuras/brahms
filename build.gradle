@@ -61,5 +61,5 @@ buildScan {
 }
 
 wrapper {
-    gradleVersion = '4.9-rc-2'
+    gradleVersion = '4.9'
 }
