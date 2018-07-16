@@ -7,6 +7,9 @@ import java.lang.annotation.Target;
 
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
-public @interface Tests {
-  Test[] value();
+public @interface Java {
+
+  String[] options() default {};
+
+  int expectedExitValue() default 0;
 }

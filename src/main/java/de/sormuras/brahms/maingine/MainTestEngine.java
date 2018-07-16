@@ -46,12 +46,12 @@ public class MainTestEngine implements TestEngine {
 
   @Override
   public String getId() {
-    return "maingine";
+    return "brahms-main-engine";
   }
 
   @Override
   public TestDescriptor discover(EngineDiscoveryRequest discoveryRequest, UniqueId uniqueId) {
-    var engine = new EngineDescriptor(uniqueId, "Maingine");
+    var engine = new EngineDescriptor(uniqueId, "Main Engine");
 
     ClassFilter classFilter = ClassFilter.of(buildClassNamePredicate(discoveryRequest), c -> true);
 
@@ -92,7 +92,7 @@ public class MainTestEngine implements TestEngine {
       return;
     }
     var container = MainClass.of(candidate, engine);
-    var annotations = main.getDeclaredAnnotationsByType(Test.class);
+    var annotations = main.getDeclaredAnnotationsByType(Main.class);
     if (annotations.length == 0) {
       var id = container.getUniqueId().append("main", "main0");
       container.addChild(new MainMethod(id, main));
@@ -151,9 +151,11 @@ public class MainTestEngine implements TestEngine {
     builder.inheritIO();
     try {
       var process = builder.start();
-      var exit = process.waitFor();
-      if (exit != 0) {
-        return TestExecutionResult.failed(new IllegalStateException("exit = " + exit));
+      var actualExitValue = process.waitFor();
+      var expectedExitValue = mainMethod.getExpectedExitValue();
+      if (actualExitValue != expectedExitValue) {
+        var message = "expected exit value " + expectedExitValue + ", but got: " + actualExitValue;
+        return TestExecutionResult.failed(new IllegalStateException(message));
       }
     } catch (IOException | InterruptedException e) {
       return TestExecutionResult.failed(e);

@@ -16,21 +16,28 @@
 
 package integration;
 
-import de.sormuras.brahms.maingine.Test;
+import de.sormuras.brahms.maingine.Java;
+import de.sormuras.brahms.maingine.Main;
 
-public class MainOne {
+public class MainTests {
 
-  @Test("1")
-  @Test({"2", "3"})
-  @Test(
-      displayName = "main with ${ARGS} as args",
+  // No-args test run
+  @Main
+  // Single argument test run
+  @Main("1")
+  // Multiple arguments test run
+  @Main({"2", "3"})
+  // Custom display name of test run
+  @Main(
+      displayName = "main with '${ARGS}' as args",
       value = {"3", "4", "5"})
-  @Test(
-      fork = true,
+  // Fork VM and launch with specific java/VM options
+  @Main(
       displayName = "☕ ${ARGS}",
-      options = {"-classpath", "${java.class.path}"},
-      value = {"6", "7"})
+      value = {"6", "7"},
+      java = @Java(options = {"-classpath", "${java.class.path}"}))
   public static void main(String... args) {
-    System.out.println("MainOne(" + String.join(", ", args) + ")");
+    var message = args.length == 0 ? "<no-args>" : String.join(", ", args);
+    System.out.println("MainTests: " + message);
   }
 }
