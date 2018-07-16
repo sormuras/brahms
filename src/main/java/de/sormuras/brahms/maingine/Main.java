@@ -8,7 +8,7 @@ import java.lang.annotation.Target;
 
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
-@Repeatable(MainContainer.class)
+@Repeatable(MainRepeatable.class)
 public @interface Main {
 
   /** Argument array to be passed to the test run. */
