@@ -29,6 +29,17 @@ dependencies {
     testRuntime "org.junit.jupiter:junit-jupiter-engine:${junitJupiterVersion}"
 }
 
+compileJava {
+    options.encoding = 'UTF-8'
+
+    // See: https://docs.oracle.com/javase/10/tools/javac.htm
+    options.compilerArgs += [
+            '--release', '10', // Compiles against the public, supported and documented API of Java 10.
+            '-Xlint',          // Enables all recommended warnings.
+            '-Werror'          // Terminates compilation when warnings occur.
+    ]
+}
+
 javadoc {
     classpath = project.sourceSets.main.compileClasspath
     options {
