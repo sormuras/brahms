@@ -78,11 +78,6 @@ public class SingleFileSourceCodeTestEngine implements TestEngine {
     var engine = request.getRootTestDescriptor();
     var listener = request.getEngineExecutionListener();
     listener.executionStarted(engine);
-    if (Runtime.version().feature() < 11) {
-      var error = new AssertionError("Java 11 or higher required, running: " + Runtime.version());
-      listener.executionFinished(engine, TestExecutionResult.aborted(error));
-      return;
-    }
     for (var descriptor : engine.getChildren()) {
       listener.executionStarted(descriptor);
       var test = (TestDescriptor) descriptor;
@@ -93,6 +88,10 @@ public class SingleFileSourceCodeTestEngine implements TestEngine {
   }
 
   private TestExecutionResult execute(Path program) {
+    if (Runtime.version().feature() < 11) {
+      var error = new AssertionError("Java 11 or higher required, running: " + Runtime.version());
+      return TestExecutionResult.aborted(error);
+    }
     var builder = new ProcessBuilder();
     builder.command().add(java.toString());
     builder.command().add(program.getFileName().toString());
