@@ -26,13 +26,13 @@ public class SingleFileSourceCodeTestEngine implements TestEngine {
   static String ENGINE_DISPLAY_NAME = "Brahms Single-File Source-Code Engine (JEP 330)";
 
   static Pattern PUBLIC_STATIC_VOID_MAIN_PATTERN =
-      Pattern.compile(".+public\\s+static\\s+void\\s+main.+String.+", Pattern.DOTALL);
+      Pattern.compile(".+(?:public\\s+)?static\\s+void\\s+main.+String.+", Pattern.DOTALL);
 
   private static boolean isSingleFileSourceCodeProgram(Path path, BasicFileAttributes attributes) {
     if (!attributes.isRegularFile()) {
       return false;
     }
-    if (attributes.size() < 45) { // "class A{public static void main(String[]a){}}"
+    if (attributes.size() < 42) { // "interface A{static void main(String[]a){}}"
       return false;
     }
     if (!path.toString().endsWith(".java")) {

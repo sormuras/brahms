@@ -40,14 +40,26 @@ class SingleFileSourceCodeTestEngineTests {
   }
 
   @Test
-  void nonPublicProgramDontMatch() {
-    var program = "class A{static void main(String[]a){}}";
+  void nonStaticProgramDontMatch() {
+    var program = "class A{public void main(String[]a){}}";
     assertFalse(PUBLIC_STATIC_VOID_MAIN_PATTERN.matcher(program).matches());
   }
 
   @Test
-  void minimalJep330ProgramMatchesPattern() {
+  void minimalClassProgramMatchesPattern() {
     var program = "class A{public static void main(String[]a){}}";
+    assertTrue(PUBLIC_STATIC_VOID_MAIN_PATTERN.matcher(program).matches());
+  }
+
+  @Test
+  void minimalInterfaceProgramMatchesPattern() {
+    var program = "interface A{static void main(String[]a){}}";
+    assertTrue(PUBLIC_STATIC_VOID_MAIN_PATTERN.matcher(program).matches());
+  }
+
+  @Test
+  void minimalEnumProgramMatchesPattern() {
+    var program = "enum A{;public static void main(String[]a){}}";
     assertTrue(PUBLIC_STATIC_VOID_MAIN_PATTERN.matcher(program).matches());
   }
 
