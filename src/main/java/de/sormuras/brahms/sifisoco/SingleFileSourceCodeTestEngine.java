@@ -21,7 +21,11 @@ import org.junit.platform.engine.support.descriptor.FileSource;
 
 public class SingleFileSourceCodeTestEngine implements TestEngine {
 
-  private static Pattern PUBLIC_STATIC_VOID_MAIN_PATTERN =
+  static String ENGINE_ID = "brahms-sifisoco";
+
+  static String ENGINE_DISPLAY_NAME = "Brahms Single-File Source-Code Engine (JEP 330)";
+
+  static Pattern PUBLIC_STATIC_VOID_MAIN_PATTERN =
       Pattern.compile(".+public\\s+static\\s+void\\s+main.+String.+", Pattern.DOTALL);
 
   private static boolean isSingleFileSourceCodeProgram(Path path, BasicFileAttributes attributes) {
@@ -58,12 +62,12 @@ public class SingleFileSourceCodeTestEngine implements TestEngine {
 
   @Override
   public String getId() {
-    return "brahms-sifisoco";
+    return ENGINE_ID;
   }
 
   @Override
   public EngineDescriptor discover(EngineDiscoveryRequest discoveryRequest, UniqueId uniqueId) {
-    var engine = new EngineDescriptor(uniqueId, "Brahms Single-File Source-Code Engine (JEP 330)");
+    var engine = new EngineDescriptor(uniqueId, ENGINE_DISPLAY_NAME);
     var scanner = new Scanner(engine);
     scanner.scanJavaClassPath();
     return engine;
