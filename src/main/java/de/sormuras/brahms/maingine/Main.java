@@ -5,10 +5,12 @@ import java.lang.annotation.Repeatable;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+import org.junit.platform.commons.annotation.Testable;
 
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
 @Repeatable(MainRepeatable.class)
+@Testable
 public @interface Main {
 
   /** Argument array to be passed to the test run. */
