@@ -1,7 +1,7 @@
 plugins {
     id 'java-library'
-    id 'com.gradle.build-scan' version '1.15'
-    id 'org.shipkit.java' version '2.0.28'
+    id 'com.gradle.build-scan' version '1.15.1'
+    id 'org.shipkit.java' version '2.0.31'
     id 'com.github.sherter.google-java-format' version '0.7.1'
     id 'com.github.ben-manes.versions' version '0.20.0'
 }
