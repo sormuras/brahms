@@ -16,7 +16,10 @@
 
 package de.sormuras.brahms.maingine;
 
+import static de.sormuras.brahms.maingine.MainTestEngine.ENGINE_DISPLAY_NAME;
+import static de.sormuras.brahms.maingine.MainTestEngine.ENGINE_ID;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import org.junit.jupiter.api.Test;
 
@@ -25,5 +28,11 @@ class MainTestEngineTests {
   @Test
   void providesPublicDefaultConstructor() {
     assertDoesNotThrow(MainTestEngine::new);
+  }
+
+  @Test
+  void constantsAreNotNull() {
+    assertNotNull(ENGINE_ID);
+    assertNotNull(ENGINE_DISPLAY_NAME);
   }
 }

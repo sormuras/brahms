@@ -44,14 +44,18 @@ import org.junit.platform.engine.support.descriptor.EngineDescriptor;
 /** Main-invoking TestEngine implementation. */
 public class MainTestEngine implements TestEngine {
 
+  static String ENGINE_ID = "brahms-maingine";
+
+  static String ENGINE_DISPLAY_NAME = "Brahms Maingine";
+
   @Override
   public String getId() {
-    return "brahms-main-engine";
+    return ENGINE_ID;
   }
 
   @Override
   public TestDescriptor discover(EngineDiscoveryRequest discoveryRequest, UniqueId uniqueId) {
-    var engine = new EngineDescriptor(uniqueId, "Main Engine");
+    var engine = new EngineDescriptor(uniqueId, ENGINE_DISPLAY_NAME);
 
     ClassFilter classFilter = ClassFilter.of(buildClassNamePredicate(discoveryRequest), c -> true);
 
