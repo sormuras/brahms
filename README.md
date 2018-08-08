@@ -63,7 +63,9 @@ When forking, you may also expect a non-zero exit value:
 ```java
 public class SystemExit123 {
 
-  @Main(value = "123", java = @Java(expectedExitValue = 123, options = {"-classpath", "${java.class.path}"}) )              
+  @Main(
+  	value = "123",
+  	java = @Java(expectedExitValue = 123, options = {"-classpath", "${java.class.path}"}))              
   public static void main(String... args) {
     System.exit(Integer.parseInt(args[0]));
   }
