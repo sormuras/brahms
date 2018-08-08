@@ -23,22 +23,22 @@ import org.junit.platform.engine.support.descriptor.MethodSource;
 
 class MainMethod extends AbstractTestDescriptor {
 
-  private static String displayName(Main test) {
-    var displayName = test.displayName();
-    var args = String.join(", ", test.value());
+  private static String displayName(Main main) {
+    var displayName = main.displayName();
+    var args = String.join(", ", main.value());
     if (displayName.length() > 0) {
       return displayName.replace("${ARGS}", args);
     }
-    return test.displayName().isEmpty() ? "main(" + args + ")" : test.displayName();
+    return main.displayName().isEmpty() ? "main(" + args + ")" : main.displayName();
   }
 
-  private static boolean isForkEnabled(Main test) {
-    // legacy logic: return test.java().enabled();
+  private static boolean isForkEnabled(Main main) {
+    // legacy logic: return main.java().enabled();
     try {
       var defaultFork = Main.class.getDeclaredMethod("java").getDefaultValue();
-      return !defaultFork.equals(test.java());
+      return !defaultFork.equals(main.java());
     } catch (NoSuchMethodException e) {
-      throw new AssertionError("no java() method in @Test class?!", e);
+      throw new AssertionError("no java() method in @Main class?!", e);
     }
   }
 
@@ -57,13 +57,13 @@ class MainMethod extends AbstractTestDescriptor {
     this.expectedExitValue = 0;
   }
 
-  MainMethod(UniqueId uniqueId, Method method, Main test) {
-    super(uniqueId, displayName(test), MethodSource.from(method));
+  MainMethod(UniqueId uniqueId, Method method, Main main) {
+    super(uniqueId, displayName(main), MethodSource.from(method));
     this.method = method;
-    this.arguments = test.value();
-    this.fork = isForkEnabled(test);
-    this.options = test.java().options();
-    this.expectedExitValue = test.java().expectedExitValue();
+    this.arguments = main.value();
+    this.fork = isForkEnabled(main);
+    this.options = main.java().options();
+    this.expectedExitValue = main.java().expectedExitValue();
   }
 
   @Override
