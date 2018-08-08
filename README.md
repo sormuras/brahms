@@ -1,7 +1,11 @@
 # brahms
-TestEngine ideas
 
-## ☕ Maingine
+This projects offers some proof-of-concept ideas implementing JUnit Platform's
+[TestEngine](https://junit.org/junit5/docs/current/user-guide/#launcher-api-engines-custom):
+
+![Brahms Overview](docs/brahms-overview.png)   
+
+## ☕ Brahms Maingine
 
 Find classes that contain a `public static void main(String[] args)` method
 and execute them.
@@ -19,7 +23,7 @@ public class MainPlain {
 }
 ```
 
-#### Customize execution `@Main` annotation
+#### Customize `@Main` execution
 
 Use the `@Main` annotation to customize the execution: pass arguments, set a
 display name, fork a `java` process with different VM parameters. Any exception
@@ -66,7 +70,7 @@ public class SystemExit123 {
 }
 ```
 
-## 📜 Single File Source Code TestEngine
+## 📜 Brahms Single File Source Code TestEngine
 
 Find `.java` source files that contain a `public static void main(String[] args)` method
 and execute them. For details see [JEP 330](http://openjdk.java.net/jeps/330).
