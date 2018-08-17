@@ -9,12 +9,16 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.regex.Pattern;
 import org.junit.platform.engine.EngineDiscoveryRequest;
 import org.junit.platform.engine.ExecutionRequest;
 import org.junit.platform.engine.TestEngine;
 import org.junit.platform.engine.TestExecutionResult;
 import org.junit.platform.engine.UniqueId;
+import org.junit.platform.engine.discovery.ClasspathRootSelector;
+import org.junit.platform.engine.discovery.UriSelector;
 import org.junit.platform.engine.support.descriptor.AbstractTestDescriptor;
 import org.junit.platform.engine.support.descriptor.EngineDescriptor;
 import org.junit.platform.engine.support.descriptor.FileSource;
@@ -69,6 +73,7 @@ public class SingleFileSourceCodeTestEngine implements TestEngine {
   public EngineDescriptor discover(EngineDiscoveryRequest discoveryRequest, UniqueId uniqueId) {
     var engine = new EngineDescriptor(uniqueId, ENGINE_DISPLAY_NAME);
     var scanner = new Scanner(engine);
+    scanner.scanRequest(discoveryRequest);
     scanner.scanJavaClassPath();
     return engine;
   }
@@ -114,9 +119,11 @@ public class SingleFileSourceCodeTestEngine implements TestEngine {
   private static class Scanner {
 
     final EngineDescriptor engine;
+    final Set<Path> programs;
 
     Scanner(EngineDescriptor engine) {
       this.engine = engine;
+      this.programs = new HashSet<>();
     }
 
     void scanJavaClassPath() {
@@ -124,9 +131,32 @@ public class SingleFileSourceCodeTestEngine implements TestEngine {
       Arrays.stream(roots).map(Paths::get).filter(Files::isDirectory).forEach(this::scanDirectory);
     }
 
+    void scanRequest(EngineDiscoveryRequest discoveryRequest) {
+      // class-path root
+      discoveryRequest
+          .getSelectorsByType(ClasspathRootSelector.class)
+          .stream()
+          .map(ClasspathRootSelector::getClasspathRoot)
+          .map(Paths::get)
+          .filter(Files::isDirectory)
+          .forEach(this::scanDirectory);
+
+      // uri
+      discoveryRequest
+          .getSelectorsByType(UriSelector.class)
+          .stream()
+          .map(UriSelector::getUri)
+          .map(Paths::get)
+          .filter(Files::isDirectory)
+          .forEach(this::scanDirectory);
+    }
+
     private void scanDirectory(Path path) {
       try {
         Files.find(path, 1, SingleFileSourceCodeTestEngine::isSingleFileSourceCodeProgram)
+            .map(Path::normalize)
+            .map(Path::toAbsolutePath)
+            .filter(file -> !programs.contains(file))
             .forEach(this::add);
       } catch (IOException e) {
         throw new UncheckedIOException("scan directory failed: " + path, e);
@@ -136,6 +166,7 @@ public class SingleFileSourceCodeTestEngine implements TestEngine {
     private void add(Path program) {
       var id = engine.getUniqueId().append("main-java", "java-" + program);
       engine.addChild(new TestDescriptor(id, program));
+      programs.add(program);
     }
   }
 
