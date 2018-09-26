@@ -1,9 +1,35 @@
 # brahms
 
+[![Maven Central](https://img.shields.io/maven-central/v/de.sormuras/brahms.svg?label=Maven%20Central)](https://search.maven.org/search?q=g:%22de.sormuras%22%20AND%20a:%22brahms%22)
+
 This projects offers some proof-of-concept ideas implementing JUnit Platform's
 [TestEngine](https://junit.org/junit5/docs/current/user-guide/#launcher-api-engines-custom):
 
-![Brahms Overview](docs/brahms-overview.png)   
+![Brahms Overview](docs/brahms-overview.png)
+
+Download the [latest JAR](https://search.maven.org/remote_content?g=de.sormuras&a=brahms&v=LATEST) or depend via Maven:
+
+```xml
+<dependency>
+  <groupId>de.sormuras</groupId>
+  <artifactId>brahms</artifactId>
+  <version>{brahms.version}</version>
+  <scope>test</scope>
+</dependency>
+```
+
+or Gradle:
+
+```
+testCompile "de.sormuras:brahms:${brahms.version}"
+```
+
+Don't want to use the brahms API in your test code?
+Add a test runtime dependency will do just fine:
+
+```
+testRuntime "de.sormuras:brahms:${brahms.version}"
+```
 
 ## ☕ Brahms Maingine
 
