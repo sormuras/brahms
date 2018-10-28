@@ -1,5 +1,7 @@
 # brahms
 
+[![jdk11](https://img.shields.io/badge/jdk-11-blue.svg)](http://jdk.java.net/11)
+[![travis](https://travis-ci.com/sormuras/brahms.svg?branch=master)](https://travis-ci.com/sormuras/brahms)
 [![Maven Central](https://img.shields.io/maven-central/v/de.sormuras/brahms.svg?label=Maven%20Central)](https://search.maven.org/search?q=g:%22de.sormuras%22%20AND%20a:%22brahms%22)
 
 This projects offers some proof-of-concept ideas implementing JUnit Platform's
