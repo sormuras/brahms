@@ -13,8 +13,8 @@ description = 'TestEngine ideas'
 
 idea {
     project {
-        jdkName = '10'
-        languageLevel = '10'
+        jdkName = '11'
+        languageLevel = '11'
     }
 }
 
@@ -32,9 +32,9 @@ dependencies {
 compileJava {
     options.encoding = 'UTF-8'
 
-    // See: https://docs.oracle.com/javase/10/tools/javac.htm
+    // See: https://docs.oracle.com/en/java/javase/11/tools/javac.html
     options.compilerArgs += [
-            '--release', '10', // Compiles against the public, supported and documented API of Java 10.
+            '--release', '11', // Compiles against the public, supported and documented API of Java 11.
             '-Xlint',          // Enables all recommended warnings.
             '-Werror'          // Terminates compilation when warnings occur.
     ]

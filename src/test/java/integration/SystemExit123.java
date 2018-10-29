@@ -19,7 +19,7 @@ package integration;
 import de.sormuras.brahms.maingine.Java;
 import de.sormuras.brahms.maingine.Main;
 
-public class SystemExit123 {
+class SystemExit123 {
 
   @Main(
       value = "123",

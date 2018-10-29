@@ -3,7 +3,6 @@ package de.sormuras.brahms.sifisoco;
 import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -43,7 +42,7 @@ public class SingleFileSourceCodeTestEngine implements TestEngine {
       return false;
     }
     try {
-      var code = new String(Files.readAllBytes(path), StandardCharsets.UTF_8);
+      var code = Files.readString(path);
       if (!PUBLIC_STATIC_VOID_MAIN_PATTERN.matcher(code).matches()) {
         return false;
       }
