@@ -4,7 +4,7 @@
 [![travis](https://travis-ci.com/sormuras/brahms.svg?branch=master)](https://travis-ci.com/sormuras/brahms)
 [![Maven Central](https://img.shields.io/maven-central/v/de.sormuras/brahms.svg?label=Maven%20Central)](https://search.maven.org/search?q=g:%22de.sormuras%22%20AND%20a:%22brahms%22)
 
-This projects offers some proof-of-concept ideas implementing JUnit Platform's
+This projects offers some proof-of-concept ideas implementing JUnit Jupiter's Extension API and JUnit Platform's
 [TestEngine](https://junit.org/junit5/docs/current/user-guide/#launcher-api-engines-custom):
 
 ![Brahms Overview](docs/brahms-overview.png)
