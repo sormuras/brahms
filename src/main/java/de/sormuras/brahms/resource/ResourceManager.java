@@ -1,7 +1,13 @@
 package de.sormuras.brahms.resource;
 
+import static org.junit.platform.commons.support.AnnotationSupport.findRepeatableAnnotations;
 import static org.junit.platform.commons.support.ReflectionSupport.newInstance;
 
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Repeatable;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.ExtensionContext.Namespace;
@@ -9,13 +15,6 @@ import org.junit.jupiter.api.extension.ExtensionContext.Store;
 import org.junit.jupiter.api.extension.ParameterContext;
 import org.junit.jupiter.api.extension.ParameterResolutionException;
 import org.junit.jupiter.api.extension.ParameterResolver;
-import org.junit.platform.commons.support.AnnotationSupport;
-
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Repeatable;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
 
 public class ResourceManager implements ParameterResolver, BeforeAllCallback {
 
@@ -24,16 +23,11 @@ public class ResourceManager implements ParameterResolver, BeforeAllCallback {
   @Repeatable(Resources.class)
   public @interface Resource {
 
-    Class<? extends ResourceSupplier<?>> value();
+    String id();
 
-    String id() default "";
+    Class<? extends ResourceSupplier<?>> supplier();
 
-    enum Context {
-      CLASS,
-      SINGLETON
-    }
-
-    Context context() default Context.CLASS;
+    boolean global() default false;
   }
 
   @Target(ElementType.TYPE)
@@ -43,12 +37,15 @@ public class ResourceManager implements ParameterResolver, BeforeAllCallback {
   }
 
   @Retention(RetentionPolicy.RUNTIME)
+  @Target(ElementType.FIELD)
+  public @interface Put {
+    String value();
+  }
+
+  @Retention(RetentionPolicy.RUNTIME)
   @Target(ElementType.PARAMETER)
   public @interface Get {
-
-    Class<? extends ResourceSupplier<?>> value();
-
-    String id() default "";
+    String value();
   }
 
   @Retention(RetentionPolicy.RUNTIME)
@@ -58,19 +55,40 @@ public class ResourceManager implements ParameterResolver, BeforeAllCallback {
     Class<? extends ResourceSupplier<?>> value();
   }
 
+  static class InstanceSupplier<R> implements ResourceSupplier<R> {
+
+    private final R instance;
+
+    InstanceSupplier(R instance) {
+      this.instance = instance;
+    }
+
+    @Override
+    public R get() {
+      return instance;
+    }
+  }
+
   private static final Namespace NAMESPACE = Namespace.create(ResourceManager.class);
 
   @Override
-  public void beforeAll(ExtensionContext extension) {
-    var resources =
-        AnnotationSupport.findRepeatableAnnotations(
-            extension.getRequiredTestClass(), Resource.class);
-    for (var resource : resources) {
-      var type = resource.value();
-      var key = type.getName() + '@' + resource.id();
-      var context = resource.context() == Resource.Context.CLASS ? extension : extension.getRoot();
-      var store = context.getStore(NAMESPACE);
-      store.getOrComputeIfAbsent(key, k -> newInstance(type), ResourceSupplier.class);
+  public void beforeAll(ExtensionContext extension) throws Exception {
+    var testClass = extension.getRequiredTestClass();
+    for (var resource : findRepeatableAnnotations(testClass, Resource.class)) {
+      var supplier = resource.supplier();
+      var context = resource.global() ? extension.getRoot() : extension;
+      context.getStore(NAMESPACE).getOrComputeIfAbsent(resource.id(), k -> newInstance(supplier));
+    }
+    for (var field : testClass.getDeclaredFields()) {
+      var put = field.getAnnotation(Put.class);
+      if (put == null) {
+        continue;
+      }
+      if (field.trySetAccessible()) {
+        var instance = field.get(testClass);
+        var supplier = new InstanceSupplier<>(instance);
+        extension.getStore(NAMESPACE).getOrComputeIfAbsent(put.value(), k -> supplier);
+      }
     }
   }
 
@@ -103,9 +121,7 @@ public class ResourceManager implements ParameterResolver, BeforeAllCallback {
     var getResource = parameter.findAnnotation(Get.class);
     if (getResource.isPresent()) {
       var resource = getResource.get();
-      var type = resource.value();
-      var key = type.getName() + '@' + resource.id();
-      var instance = store.get(key, ResourceSupplier.class);
+      var instance = store.get(resource.value(), ResourceSupplier.class);
       if (instance == null) {
         throw new ParameterResolutionException("No such resource found: " + resource);
       }
