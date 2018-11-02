@@ -2,25 +2,86 @@ package de.sormuras.brahms.resource;
 
 import static org.junit.platform.commons.support.ReflectionSupport.newInstance;
 
+import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.ExtensionContext.Namespace;
+import org.junit.jupiter.api.extension.ExtensionContext.Store;
 import org.junit.jupiter.api.extension.ParameterContext;
 import org.junit.jupiter.api.extension.ParameterResolutionException;
 import org.junit.jupiter.api.extension.ParameterResolver;
+import org.junit.platform.commons.support.AnnotationSupport;
 
-public class ResourceManager implements ParameterResolver {
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Repeatable;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+
+public class ResourceManager implements ParameterResolver, BeforeAllCallback {
+
+  @Retention(RetentionPolicy.RUNTIME)
+  @Target(ElementType.TYPE)
+  @Repeatable(Resources.class)
+  public @interface Resource {
+
+    Class<? extends ResourceSupplier<?>> value();
+
+    String id() default "";
+
+    enum Context {
+      CLASS,
+      SINGLETON
+    }
+
+    Context context() default Context.CLASS;
+  }
+
+  @Target(ElementType.TYPE)
+  @Retention(RetentionPolicy.RUNTIME)
+  public @interface Resources {
+    Resource[] value();
+  }
+
+  @Retention(RetentionPolicy.RUNTIME)
+  @Target(ElementType.PARAMETER)
+  public @interface Get {
+
+    Class<? extends ResourceSupplier<?>> value();
+
+    String id() default "";
+  }
+
+  @Retention(RetentionPolicy.RUNTIME)
+  @Target(ElementType.PARAMETER)
+  public @interface New {
+
+    Class<? extends ResourceSupplier<?>> value();
+  }
+
+  private static final Namespace NAMESPACE = Namespace.create(ResourceManager.class);
+
+  @Override
+  public void beforeAll(ExtensionContext extension) {
+    var resources =
+        AnnotationSupport.findRepeatableAnnotations(
+            extension.getRequiredTestClass(), Resource.class);
+    for (var resource : resources) {
+      var type = resource.value();
+      var key = type.getName() + '@' + resource.id();
+      var context = resource.context() == Resource.Context.CLASS ? extension : extension.getRoot();
+      var store = context.getStore(NAMESPACE);
+      store.getOrComputeIfAbsent(key, k -> newInstance(type), ResourceSupplier.class);
+    }
+  }
 
   @Override
   public boolean supportsParameter(ParameterContext parameter, ExtensionContext __) {
-    return parameter.isAnnotated(Resource.class)
-        ^ parameter.isAnnotated(GlobalResource.class)
-        ^ parameter.isAnnotated(ClassResource.class)
-        ^ parameter.isAnnotated(MethodResource.class);
+    return parameter.isAnnotated(Get.class) ^ parameter.isAnnotated(New.class);
   }
 
   @Override
   public Object resolveParameter(ParameterContext parameter, ExtensionContext extension) {
-    var supplier = new Resolver(parameter, extension).resolve();
+    var supplier = resolveSupplier(parameter, extension.getStore(NAMESPACE));
     var parameterType = parameter.getParameter().getType();
     if (ResourceSupplier.class.isAssignableFrom(parameterType)) {
       return supplier;
@@ -38,88 +99,27 @@ public class ResourceManager implements ParameterResolver {
             + instance.getClass());
   }
 
-  private static class Resolver {
-
-    private static final Namespace NAMESPACE = Namespace.create(ResourceManager.class);
-
-    private final ParameterContext parameterContext;
-    private final ExtensionContext methodContext;
-
-    Resolver(ParameterContext parameterContext, ExtensionContext methodContext) {
-      this.parameterContext = parameterContext;
-      this.methodContext = methodContext;
-    }
-
-    private ResourceSupplier<?> resolve() {
-      var methodResource = parameterContext.findAnnotation(MethodResource.class);
-      if (methodResource.isPresent()) {
-        return createMethodResource(methodResource.get(), parameterContext.getIndex());
-      }
-      var classResource = parameterContext.findAnnotation(ClassResource.class);
-      if (classResource.isPresent()) {
-        return getOrCreateClassResource(classResource.get());
-      }
-      var globalResource = parameterContext.findAnnotation(GlobalResource.class);
-      if (globalResource.isPresent()) {
-        return getOrCreateGlobalResource(globalResource.get());
-      }
-      var resource = parameterContext.findAnnotation(Resource.class);
-      if (resource.isPresent()) {
-        return resolveResource(resource.get(), parameterContext.getIndex());
-      }
-      throw new ParameterResolutionException("Can't resolve resource for: " + parameterContext);
-    }
-
-    private ResourceSupplier<?> resolveResource(Resource resource, int index) {
+  private ResourceSupplier<?> resolveSupplier(ParameterContext parameter, Store store) {
+    var getResource = parameter.findAnnotation(Get.class);
+    if (getResource.isPresent()) {
+      var resource = getResource.get();
       var type = resource.value();
-      if (resource.context() == Resource.Context.METHOD) {
-        return createResource(type, index);
-      }
       var key = type.getName() + '@' + resource.id();
-      var context =
-          resource.context() == Resource.Context.GLOBAL
-              ? methodContext.getRoot()
-              : methodContext.getParent().orElseThrow(AssertionError::new);
-      return getOrCreateResource(type, key, context);
-    }
-
-    private ResourceSupplier<?> createMethodResource(MethodResource methodResource, int index) {
-      return createResource(methodResource.value(), index);
-    }
-
-    private ResourceSupplier<?> createResource(
-        Class<? extends ResourceSupplier<?>> type, int index) {
-      var key = type.getName() + '@' + index;
-      var instance = newInstance(type);
-      methodContext.getStore(NAMESPACE).put(key, instance);
+      var instance = store.get(key, ResourceSupplier.class);
+      if (instance == null) {
+        throw new ParameterResolutionException("No such resource found: " + resource);
+      }
       return instance;
     }
-
-    private ResourceSupplier<?> getOrCreateClassResource(ClassResource classResource) {
-      var type = classResource.value();
-      var key = type.getName() + '@' + classResource.id();
-      var context = methodContext.getParent().orElseThrow(AssertionError::new);
-      return getOrCreateResource(type, key, context);
+    var newResource = parameter.findAnnotation(New.class);
+    if (newResource.isPresent()) {
+      var resource = newResource.get();
+      var type = resource.value();
+      var key = type.getName() + '@' + parameter.getIndex();
+      var instance = newInstance(type);
+      store.put(key, instance);
+      return instance;
     }
-
-    private ResourceSupplier<?> getOrCreateGlobalResource(GlobalResource globalResource) {
-      var type = globalResource.value();
-      var key = type.getName() + '@' + globalResource.id();
-      var context = methodContext.getRoot();
-      return getOrCreateResource(type, key, context);
-    }
-
-    private ResourceSupplier<?> getOrCreateResource(
-        Class<? extends ResourceSupplier<?>> type, Object key, ExtensionContext storeContext) {
-      // first, look up an existing resource available via the current method context's hierarchy
-      var resource = methodContext.getStore(NAMESPACE).get(key, ResourceSupplier.class);
-      if (resource != null) {
-        return resource;
-      }
-      // still here: create resource and store it in the specified store context
-      return storeContext
-          .getStore(NAMESPACE)
-          .getOrComputeIfAbsent(key, k -> newInstance(type), ResourceSupplier.class);
-    }
+    throw new ParameterResolutionException("Can't resolve resource supplier for: " + parameter);
   }
 }
