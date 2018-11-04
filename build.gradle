@@ -63,7 +63,9 @@ jar {
 }
 
 test {
-    useJUnitPlatform()
+    useJUnitPlatform() {
+        include('**/*Tests.class')
+    }
     testLogging {
         events 'passed', 'skipped', 'failed'
         showStandardStreams = false
