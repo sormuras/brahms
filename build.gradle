@@ -20,11 +20,15 @@ idea {
 
 repositories {
     mavenCentral()
+    maven { url 'https://oss.sonatype.org/content/repositories/snapshots' }
 }
 
 dependencies {
     compile "org.junit.platform:junit-platform-engine:${junitPlatformVersion}"
     compile "org.junit.jupiter:junit-jupiter-api:${junitJupiterVersion}"
+
+    testCompile "org.junit.platform:junit-platform-launcher:${junitPlatformVersion}"
+    testCompile "org.junit.platform:junit-platform-testkit:${junitPlatformVersion}"
 
     testRuntime "org.junit.jupiter:junit-jupiter-engine:${junitJupiterVersion}"
 }
