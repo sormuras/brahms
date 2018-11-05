@@ -11,7 +11,7 @@ import org.junit.jupiter.api.DisplayNameGenerator;
 import org.junit.jupiter.api.Test;
 import org.junit.platform.engine.TestExecutionResult;
 import org.junit.platform.engine.discovery.DiscoverySelectors;
-import org.junit.platform.testkit.engine.ExecutionRecorder;
+import org.junit.platform.testkit.engine.EngineTestKit;
 import org.junit.platform.testkit.engine.ExecutionResults;
 
 @DisplayNameGeneration(DisplayNameGenerator.ReplaceUnderscores.class)
@@ -61,7 +61,7 @@ class MaingineIntegrationTests {
 
   private ExecutionResults execute(Class<?> program) {
     var discoveryRequest = request().selectors(DiscoverySelectors.selectClass(program)).build();
-    return ExecutionRecorder.execute(new MainTestEngine(), discoveryRequest);
+    return EngineTestKit.execute(new MainTestEngine(), discoveryRequest);
   }
 
   public static class SuccessfulMainProgram {
