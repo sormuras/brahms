@@ -11,8 +11,8 @@ import org.junit.jupiter.api.DisplayNameGenerator;
 import org.junit.jupiter.api.Test;
 import org.junit.platform.engine.TestExecutionResult;
 import org.junit.platform.engine.discovery.DiscoverySelectors;
+import org.junit.platform.testkit.engine.EngineExecutionResults;
 import org.junit.platform.testkit.engine.EngineTestKit;
-import org.junit.platform.testkit.engine.ExecutionResults;
 
 @DisplayNameGeneration(DisplayNameGenerator.ReplaceUnderscores.class)
 class MaingineIntegrationTests {
@@ -59,7 +59,7 @@ class MaingineIntegrationTests {
     assertEquals("java.lang.Error: Guru Meditation", String.valueOf(throwable.getCause()));
   }
 
-  private ExecutionResults execute(Class<?> program) {
+  private EngineExecutionResults execute(Class<?> program) {
     var discoveryRequest = request().selectors(DiscoverySelectors.selectClass(program)).build();
     return EngineTestKit.execute(new MainTestEngine(), discoveryRequest);
   }
