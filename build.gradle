@@ -1,8 +1,8 @@
 plugins {
     id 'java-library'
-    id 'com.gradle.build-scan' version '1.16'
+    id 'com.gradle.build-scan' version '2.1'
     id 'org.shipkit.java' version '2.0.31'
-    id 'com.github.sherter.google-java-format' version '0.7.1'
+    id 'com.github.sherter.google-java-format' version '0.8'
     id 'com.github.ben-manes.versions' version '0.20.0'
 }
 
@@ -24,13 +24,13 @@ repositories {
 }
 
 dependencies {
-    compile "org.junit.platform:junit-platform-engine:${junitPlatformVersion}"
-    compile "org.junit.jupiter:junit-jupiter-api:${junitJupiterVersion}"
+    implementation "org.junit.platform:junit-platform-engine:${junitPlatformVersion}"
+    implementation "org.junit.jupiter:junit-jupiter-api:${junitJupiterVersion}"
 
-    testCompile "org.junit.platform:junit-platform-launcher:${junitPlatformVersion}"
-    testCompile "org.junit.platform:junit-platform-testkit:${junitPlatformVersion}"
+    testImplementation "org.junit.platform:junit-platform-launcher:${junitPlatformVersion}"
+    testImplementation "org.junit.platform:junit-platform-testkit:${junitPlatformVersion}"
 
-    testRuntime "org.junit.jupiter:junit-jupiter-engine:${junitJupiterVersion}"
+    testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${junitJupiterVersion}"
 }
 
 compileJava {
@@ -78,5 +78,5 @@ buildScan {
 }
 
 wrapper {
-    gradleVersion = '4.10.2'
+    gradleVersion = '5.0'
 }

@@ -6,5 +6,3 @@ if (javaVersion < 10) {
 }
 
 rootProject.name = 'brahms'
-
-enableFeaturePreview('STABLE_PUBLISHING')
