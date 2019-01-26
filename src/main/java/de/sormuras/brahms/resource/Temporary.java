@@ -1,6 +1,5 @@
-package integration.resource;
+package de.sormuras.brahms.resource;
 
-import de.sormuras.brahms.resource.ResourceSupplier;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;

@@ -3,6 +3,7 @@ package integration.resource;
 import de.sormuras.brahms.resource.ResourceManager;
 import de.sormuras.brahms.resource.ResourceManager.New;
 import de.sormuras.brahms.resource.ResourceManager.Singleton;
+import de.sormuras.brahms.resource.Temporary;
 import java.nio.file.Path;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
