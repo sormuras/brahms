@@ -13,10 +13,14 @@ public class Temporary implements ResourceSupplier<Path> {
 
   public Temporary() {
     try {
-      this.path = Files.createTempDirectory("temporary-");
-    } catch (IOException e) {
+      this.path = createTempDirectory();
+    } catch (Exception e) {
       throw new ParameterResolutionException("creating temporary directory failed", e);
     }
+  }
+
+  protected Path createTempDirectory() throws Exception {
+		  return Files.createTempDirectory("temporary-");
   }
 
   @Override
@@ -26,6 +30,7 @@ public class Temporary implements ResourceSupplier<Path> {
 
   @Override
   public void close() {
+    System.out.println("DELETING --> " + path);
     // trivial case: delete empty directory right away
     try {
       if (Files.deleteIfExists(path)) {
