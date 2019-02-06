@@ -3,9 +3,10 @@ package integration.resource;
 import com.google.common.jimfs.Configuration;
 import com.google.common.jimfs.Jimfs;
 import de.sormuras.brahms.resource.ResourceManager;
+import de.sormuras.brahms.resource.ResourceManager.New;
+import de.sormuras.brahms.resource.ResourceManager.Shared;
+import de.sormuras.brahms.resource.ResourceManager.Singleton;
 import de.sormuras.brahms.resource.ResourceSupplier;
-import de.sormuras.brahms.resource.ResourceSupplier.New;
-import de.sormuras.brahms.resource.ResourceSupplier.Singleton;
 import de.sormuras.brahms.resource.Temporary;
 import java.nio.file.FileSystem;
 import java.nio.file.Path;
@@ -60,7 +61,7 @@ class ChickenAndEggTests {
   }
 
   @Test
-  void shared(@ResourceSupplier.Shared(key = "4711", value = JimFS.class) Path shared) {
+  void shared(@Shared(name = "4711", type = JimFS.class) Path shared) {
     System.out.println();
     System.out.println("* shared() = " + shared.toUri());
     System.out.println("GLOBAL     = " + global);

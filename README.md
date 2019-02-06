@@ -33,7 +33,60 @@ Add a test runtime dependency will do just fine:
 testRuntime "de.sormuras:brahms:${brahms.version}"
 ```
 
+## Resource Manager Extension
+
+The resource manager extension provides hassle-free global, named, and "one-shot" resource management.
+You may use three different annotations at method parameters to declare in which mode a resource should be managed.
+
+- `ResourceManager.@New` - create an instance of the resource and close it when the context is teared down.
+- `ResourceManager.@Shared` - get or create an instance of the named resource
+- `ResourceManager.@Singleton` - get or create the single instance of the resource - same as `@Shared(name = type.name()...)` 
+
+`@Shared` and `@Singleton` resource are created on demand - the first parameter resolution request wins.
+Resource created be those annotation may be used and shared between different test classes!
+The attached resources are closed when the global Jupiter extension context store is closing.
+
+### Temporary Directory as Resource
+
+Brahms provides `Temporary` as a resource supplier that creates and closes temporary directories.
+
+```java
+@ExtendWith(ResourceManager.class)
+class Tests { 
+  @Test
+  void test(@New(Temporary) Path temp) {
+	// do something with "temp"
+  }
+}
+```
+
+`@New` resources supplied to the constructor of a test class are automatically cleaned up after the 
+```java
+@ExtendWith(ResourceManager.class)
+class Tests {
+
+  final Path temp;		
+	
+  Tests(@New(Temporary) Path temp) {
+	this.temp = temp;
+  }
+  
+  @Test
+  void test() {
+	// do something with "this.temp"
+  }
+}
+```
+
+### Custom Resource
+
+Find samples of custom resources, like a declaring and sharing a `WebServer` and temporary & in-memory directory via `JimFS`, here:
+
+[integration/resource](https://github.com/sormuras/brahms/tree/master/src/test/java/integration/resource)
+
 ## ☕ Brahms Maingine
+
+**NOTE: Development of Maingine is continued here: https://github.com/sormuras/mainrunner**
 
 Find classes that contain a `public static void main(String[] args)` method
 and execute them.
@@ -101,6 +154,8 @@ public class SystemExit123 {
 ```
 
 ## 📜 Brahms Single File Source Code TestEngine
+
+**NOTE: Development of SingleFileSourceCodeTestEngine is continued here: https://github.com/sormuras/mainrunner**
 
 Find `.java` source files that contain a `public static void main(String[] args)` method
 and execute them. For details see [JEP 330](http://openjdk.java.net/jeps/330).

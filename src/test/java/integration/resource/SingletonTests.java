@@ -3,7 +3,7 @@ package integration.resource;
 import static org.junit.jupiter.api.Assertions.assertLinesMatch;
 
 import de.sormuras.brahms.resource.ResourceManager;
-import de.sormuras.brahms.resource.ResourceSupplier.Singleton;
+import de.sormuras.brahms.resource.ResourceManager.Singleton;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

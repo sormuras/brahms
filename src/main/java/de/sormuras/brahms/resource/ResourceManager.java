@@ -4,9 +4,10 @@ import static org.junit.platform.commons.support.HierarchyTraversalMode.TOP_DOWN
 import static org.junit.platform.commons.support.ReflectionSupport.findFields;
 import static org.junit.platform.commons.support.ReflectionSupport.newInstance;
 
-import de.sormuras.brahms.resource.ResourceSupplier.New;
-import de.sormuras.brahms.resource.ResourceSupplier.Shared;
-import de.sormuras.brahms.resource.ResourceSupplier.Singleton;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 import java.lang.reflect.Constructor;
 import java.util.HashSet;
 import java.util.Map;
@@ -24,6 +25,28 @@ import org.junit.jupiter.api.extension.ParameterResolver;
 import org.junit.platform.commons.support.ReflectionSupport;
 
 public class ResourceManager implements ParameterResolver, AfterEachCallback {
+
+  @Retention(RetentionPolicy.RUNTIME)
+  @Target({ElementType.PARAMETER, ElementType.ANNOTATION_TYPE})
+  public @interface New {
+
+    Class<? extends ResourceSupplier<?>> value();
+  }
+
+  @Retention(RetentionPolicy.RUNTIME)
+  @Target(ElementType.PARAMETER)
+  public @interface Shared {
+    String name();
+
+    Class<? extends ResourceSupplier<?>> type();
+  }
+
+  @Retention(RetentionPolicy.RUNTIME)
+  @Target(ElementType.PARAMETER)
+  public @interface Singleton {
+
+    Class<? extends ResourceSupplier<?>> value();
+  }
 
   private static final Namespace NAMESPACE = Namespace.create(ResourceManager.class);
   private static final AtomicLong NEW_COUNTER = new AtomicLong();
@@ -80,8 +103,8 @@ public class ResourceManager implements ParameterResolver, AfterEachCallback {
 
     Optional<Shared> sharedAnnotation = parameter.findAnnotation(Shared.class);
     if (sharedAnnotation.isPresent()) {
-      Class<? extends ResourceSupplier<?>> type = sharedAnnotation.get().value();
-      String key = sharedAnnotation.get().key();
+      Class<? extends ResourceSupplier<?>> type = sharedAnnotation.get().type();
+      String key = sharedAnnotation.get().name();
       return supplier(context, key, type);
     }
 
@@ -119,6 +142,7 @@ public class ResourceManager implements ParameterResolver, AfterEachCallback {
       return; // no test class, no cleanup
     }
     // find fields holding a reference to a registered supplier or the value it supplies
+    // TODO exclude static fields?
     for (var field : findFields(optionalTestClass.get(), __ -> true, TOP_DOWN)) {
       var value =
           ReflectionSupport.tryToReadFieldValue(field, context.getRequiredTestInstance())
