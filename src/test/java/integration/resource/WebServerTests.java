@@ -3,9 +3,8 @@ package integration.resource;
 import static org.junit.jupiter.api.Assertions.assertLinesMatch;
 
 import de.sormuras.brahms.resource.ResourceManager;
-import de.sormuras.brahms.resource.ResourceManager.Closeable;
-import de.sormuras.brahms.resource.ResourceManager.New;
-import de.sormuras.brahms.resource.ResourceManager.Singleton;
+import de.sormuras.brahms.resource.ResourceSupplier.New;
+import de.sormuras.brahms.resource.ResourceSupplier.Singleton;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -18,7 +17,11 @@ import org.junit.jupiter.api.extension.ExtendWith;
 @ExtendWith(ResourceManager.class)
 class WebServerTests {
 
-  @Closeable private static WebServer classServer = new WebServer();
+  private WebServer classServer;
+
+  WebServerTests(@New(WebServer.class) WebServer server) {
+    this.classServer = server;
+  }
 
   @Test
   void usingClassLocalServer() {

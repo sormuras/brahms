@@ -1,10 +1,13 @@
 package integration.resource;
 
+import com.google.common.jimfs.Configuration;
+import com.google.common.jimfs.Jimfs;
 import de.sormuras.brahms.resource.ResourceManager;
-import de.sormuras.brahms.resource.ResourceManager.New;
-import de.sormuras.brahms.resource.ResourceManager.Singleton;
+import de.sormuras.brahms.resource.ResourceSupplier;
+import de.sormuras.brahms.resource.ResourceSupplier.New;
+import de.sormuras.brahms.resource.ResourceSupplier.Singleton;
 import de.sormuras.brahms.resource.Temporary;
-import java.nio.file.Files;
+import java.nio.file.FileSystem;
 import java.nio.file.Path;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -30,7 +33,7 @@ class ChickenAndEggTests {
   @Test
   void chicken(@New(Temporary.class) Path chicken) {
     System.out.println();
-    System.out.println("*** chicken() = " + chicken);
+    System.out.println("*** chicken() = " + chicken.toUri());
     System.out.println("GLOBAL     = " + global);
     System.out.println("this.local = " + local);
   }
@@ -38,15 +41,48 @@ class ChickenAndEggTests {
   @Test
   void egg(@New(JimFS.class) Path egg) {
     System.out.println();
-    System.out.println("**** egg() = " + egg);
+    System.out.println("**** egg() = " + egg.toUri());
+    System.out.println("GLOBAL     = " + global);
+    System.out.println("this.local = " + local);
+  }
+
+  @Test
+  void mix(
+      @New(Temporary.class) Path m1,
+      @New(JimFS.class) Path m2,
+      @Singleton(Temporary.class) Path m3) {
+    System.out.println();
+    System.out.println("*** mix(1) = " + m1.toUri());
+    System.out.println("*** mix(2) = " + m2.toUri());
+    System.out.println("*** mix(3) = " + m3.toUri());
+    System.out.println("GLOBAL     = " + global);
+    System.out.println("this.local = " + local);
+  }
+
+  @Test
+  void shared(@ResourceSupplier.Shared(key = "4711", value = JimFS.class) Path shared) {
+    System.out.println();
+    System.out.println("* shared() = " + shared.toUri());
     System.out.println("GLOBAL     = " + global);
     System.out.println("this.local = " + local);
   }
 }
 
-class JimFS extends Temporary {
+class JimFS implements ResourceSupplier<Path> {
+
+  private final FileSystem jim = Jimfs.newFileSystem(Configuration.unix());
+
   @Override
-  protected Path createTempDirectory() throws Exception {
-    return Files.createTempDirectory("here-be-jim-fs-");
+  public Path get() {
+    return jim.getPath("/");
+  }
+
+  @Override
+  public void close() {
+    try {
+      jim.close();
+    } catch (Exception e) {
+      throw new RuntimeException("He's dead, Jim.", e);
+    }
   }
 }

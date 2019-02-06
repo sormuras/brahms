@@ -1,98 +1,60 @@
 package de.sormuras.brahms.resource;
 
+import static org.junit.platform.commons.support.HierarchyTraversalMode.TOP_DOWN;
+import static org.junit.platform.commons.support.ReflectionSupport.findFields;
 import static org.junit.platform.commons.support.ReflectionSupport.newInstance;
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
-import java.lang.reflect.Modifier;
-import org.junit.jupiter.api.extension.BeforeAllCallback;
+import de.sormuras.brahms.resource.ResourceSupplier.New;
+import de.sormuras.brahms.resource.ResourceSupplier.Shared;
+import de.sormuras.brahms.resource.ResourceSupplier.Singleton;
+import java.lang.reflect.Constructor;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
+import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.extension.AfterEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.ExtensionContext.Namespace;
 import org.junit.jupiter.api.extension.ParameterContext;
 import org.junit.jupiter.api.extension.ParameterResolutionException;
 import org.junit.jupiter.api.extension.ParameterResolver;
-import org.junit.platform.commons.JUnitException;
+import org.junit.platform.commons.support.ReflectionSupport;
 
-public class ResourceManager implements ParameterResolver, BeforeAllCallback {
-
-  @Retention(RetentionPolicy.RUNTIME)
-  @Target(ElementType.FIELD)
-  public @interface Closeable {}
-
-  @Retention(RetentionPolicy.RUNTIME)
-  @Target(ElementType.PARAMETER)
-  public @interface New {
-
-    Class<? extends ResourceSupplier<?>> value();
-  }
-
-  @Retention(RetentionPolicy.RUNTIME)
-  @Target(ElementType.PARAMETER)
-  public @interface Singleton {
-
-    Class<? extends ResourceSupplier<?>> value();
-  }
-
-  static class InstanceSupplier<R> implements ResourceSupplier<R> {
-
-    private final R instance;
-
-    InstanceSupplier(R instance) {
-      this.instance = instance;
-    }
-
-    @Override
-    public R get() {
-      return instance;
-    }
-  }
+public class ResourceManager implements ParameterResolver, AfterEachCallback {
 
   private static final Namespace NAMESPACE = Namespace.create(ResourceManager.class);
+  private static final AtomicLong NEW_COUNTER = new AtomicLong();
 
-  @Override
-  public void beforeAll(ExtensionContext extension) throws Exception {
-    var testClass = extension.getRequiredTestClass();
-    var classStore = extension.getStore(NAMESPACE);
-    for (var field : testClass.getDeclaredFields()) {
-      if (field.isSynthetic()) {
-        continue;
-      }
-      if (!field.isAnnotationPresent(Closeable.class)) {
-        continue;
-      }
-      if (!Modifier.isStatic(field.getModifiers())) {
-        throw new JUnitException("Annotated field must be static: " + field);
-      }
-      if (field.trySetAccessible()) {
-        var instance = field.get(testClass);
-        var supplier = new InstanceSupplier<>(instance);
-        classStore.getOrComputeIfAbsent(field.toString(), k -> supplier);
-      } else {
-        throw new JUnitException("Can't make field accessible: " + field);
-      }
-    }
-  }
+  private final Map<String, Set<ResourceSupplier<?>>> registry = new ConcurrentHashMap<>();
 
   @Override
   public boolean supportsParameter(ParameterContext parameter, ExtensionContext __) {
-    return parameter.isAnnotated(New.class) ^ parameter.isAnnotated(Singleton.class);
+    return parameter.isAnnotated(New.class)
+        ^ parameter.isAnnotated(Shared.class)
+        ^ parameter.isAnnotated(Singleton.class);
   }
 
   @Override
   public Object resolveParameter(ParameterContext parameter, ExtensionContext extension) {
-    var supplier = supplier(parameter, extension);
-    var parameterType = parameter.getParameter().getType();
+    ResourceSupplier<?> supplier = supplier(parameter, extension);
+    Class<?> parameterType = parameter.getParameter().getType();
     if (ResourceSupplier.class.isAssignableFrom(parameterType)) {
       return supplier;
     }
-    var instance = supplier.get();
+    Object instance = supplier.get();
     if (parameterType.isAssignableFrom(instance.getClass())) {
       return instance;
     }
+    try {
+      return supplier.as(parameterType);
+    } catch (UnsupportedOperationException ignore) {
+      // fall-through
+    }
     throw new ParameterResolutionException(
-        "Parameter type "
+        "parameter type "
             + parameterType
             + " isn't compatible with "
             + ResourceSupplier.class
@@ -101,29 +63,77 @@ public class ResourceManager implements ParameterResolver, BeforeAllCallback {
   }
 
   private ResourceSupplier<?> supplier(ParameterContext parameter, ExtensionContext context) {
-    var newAnnotation = parameter.findAnnotation(New.class);
+    Optional<New> newAnnotation = parameter.findAnnotation(New.class);
     if (newAnnotation.isPresent()) {
-      var type = newAnnotation.get().value();
-      var key = type.getName() + '@' + parameter.getIndex();
-      var instance = newInstance(type);
-      context.getStore(NAMESPACE).put(key, instance);
-      return instance;
+      Class<? extends ResourceSupplier<?>> type = newAnnotation.get().value();
+      String key = type.getName() + '@' + NEW_COUNTER.incrementAndGet();
+      ResourceSupplier<?> resourceSupplier = newInstance(type);
+      assert context.getStore(NAMESPACE).get(key) == null;
+      context.getStore(NAMESPACE).put(key, resourceSupplier);
+      // remember all suppliers created for a constructor parameter resolution
+      if (parameter.getDeclaringExecutable() instanceof Constructor) {
+        String registryKey = parameter.getDeclaringExecutable().getDeclaringClass().getName();
+        registry.computeIfAbsent(registryKey, k -> new HashSet<>()).add(resourceSupplier);
+      }
+      return resourceSupplier;
     }
 
-    var singletonAnnotation = parameter.findAnnotation(Singleton.class);
+    Optional<Shared> sharedAnnotation = parameter.findAnnotation(Shared.class);
+    if (sharedAnnotation.isPresent()) {
+      Class<? extends ResourceSupplier<?>> type = sharedAnnotation.get().value();
+      String key = sharedAnnotation.get().key();
+      return supplier(context, key, type);
+    }
+
+    Optional<Singleton> singletonAnnotation = parameter.findAnnotation(Singleton.class);
     if (singletonAnnotation.isPresent()) {
-      var supplier = singletonAnnotation.get().value();
-      var key = supplier.getName();
-      var instance = context.getStore(NAMESPACE).get(key, ResourceSupplier.class);
-      if (instance != null) {
-        return instance;
-      }
-      return context
-          .getRoot()
-          .getStore(NAMESPACE)
-          .getOrComputeIfAbsent(key, k -> newInstance(supplier), ResourceSupplier.class);
+      Class<? extends ResourceSupplier<?>> type = singletonAnnotation.get().value();
+      String key = type.getName();
+      return supplier(context, key, type);
     }
 
     throw new ParameterResolutionException("Can't resolve resource supplier for: " + parameter);
+  }
+
+  private ResourceSupplier<?> supplier(
+      ExtensionContext context, String key, Class<? extends ResourceSupplier<?>> type) {
+    ExtensionContext.Store store = context.getRoot().getStore(NAMESPACE);
+    return store.getOrComputeIfAbsent(key, k -> newInstance(type), ResourceSupplier.class);
+  }
+
+  @Override
+  public void afterEach(ExtensionContext context) {
+    if (context.getTestInstanceLifecycle().isEmpty()) {
+      return; // engine node
+    }
+    var lifecycle = context.getTestInstanceLifecycle().get();
+    if (lifecycle == TestInstance.Lifecycle.PER_CLASS) {
+      return; // don't close class resources after each test method
+    }
+    var suppliers = registry.getOrDefault(context.getRequiredTestClass().getName(), Set.of());
+    if (suppliers.isEmpty()) {
+      return; // no "@New resource" constructor parameters registered for this test class
+    }
+    var optionalTestClass = context.getTestClass();
+    if (optionalTestClass.isEmpty()) {
+      return; // no test class, no cleanup
+    }
+    // find fields holding a reference to a registered supplier or the value it supplies
+    for (var field : findFields(optionalTestClass.get(), __ -> true, TOP_DOWN)) {
+      var value =
+          ReflectionSupport.tryToReadFieldValue(field, context.getRequiredTestInstance())
+              .getOrThrow(RuntimeException::new);
+      for (var supplier : suppliers) {
+        if (supplier == value || supplier.get() == value) {
+          context.publishReportEntry("closing resource", supplier.get().toString());
+          try {
+            supplier.close();
+          } catch (Exception e) {
+            // TODO Collect and report exceptions...
+            throw new RuntimeException("closing resource supplier failed", e);
+          }
+        }
+      }
+    }
   }
 }

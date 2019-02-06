@@ -3,6 +3,7 @@ package integration.resource;
 import static org.junit.jupiter.api.Assertions.assertLinesMatch;
 
 import de.sormuras.brahms.resource.ResourceManager;
+import de.sormuras.brahms.resource.ResourceSupplier.Singleton;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -11,7 +12,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 class SingletonTests {
 
   @Test
-  void usingSharedServerInstance(@ResourceManager.Singleton(WebServer.class) WebServer server) {
+  void usingSharedServerInstance(@Singleton(WebServer.class) WebServer server) {
     var actual = server.getTextLines(server.getUri());
     assertLinesMatch(List.of("counter = [1|2|3]"), actual);
   }
