@@ -78,6 +78,19 @@ class Tests {
 }
 ```
 
+Use `@TempDir`, a composed annotation short-cut for `@ResourceManager.New(Temporary.class)`:
+
+```java
+@ExtendWith(ResourceManager.class)
+class Tests { 
+  @Test
+  void test(@TempDir Path temp) {
+	// do something with "temp"
+  }
+}
+```
+
+
 ### Custom Resource
 
 Find samples of custom resources, like a declaring and sharing a `WebServer` and temporary & in-memory directory via `JimFS`, here:

@@ -7,6 +7,7 @@ import de.sormuras.brahms.resource.ResourceManager.New;
 import de.sormuras.brahms.resource.ResourceManager.Shared;
 import de.sormuras.brahms.resource.ResourceManager.Singleton;
 import de.sormuras.brahms.resource.ResourceSupplier;
+import de.sormuras.brahms.resource.TempDir;
 import de.sormuras.brahms.resource.Temporary;
 import java.nio.file.FileSystem;
 import java.nio.file.Path;
@@ -48,10 +49,7 @@ class ChickenAndEggTests {
   }
 
   @Test
-  void mix(
-      @New(Temporary.class) Path m1,
-      @New(JimFS.class) Path m2,
-      @Singleton(Temporary.class) Path m3) {
+  void mix(@TempDir Path m1, @New(JimFS.class) Path m2, @Singleton(Temporary.class) Path m3) {
     System.out.println();
     System.out.println("*** mix(1) = " + m1.toUri());
     System.out.println("*** mix(2) = " + m2.toUri());
